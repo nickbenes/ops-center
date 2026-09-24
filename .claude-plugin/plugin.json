@@ -1,0 +1,9 @@
+{
+  "name": "ops-center",
+  "description": "Bootstrap and manage a persistent, filesystem-backed project workspace that lets independent Claude Code threads coordinate over time without shared conversational memory.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Nick Benes",
+    "email": "nickbenes@gmail.com"
+  }
+}
