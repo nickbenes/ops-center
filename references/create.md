@@ -21,6 +21,12 @@ the harness supports the rest of this flow at all:
   directory: this is out of scope for `/ops-center`. Say so plainly and suggest running this
   inside a Claude Code working directory instead of guessing at a substitute.
 
+Once the location is settled, read and write every file for the rest of this flow using paths
+**relative to that location** (e.g. `AGENTS.md`, `memory/PROJECT-MISSION.md`) rather than
+resolving and reusing an absolute path everywhere. The one exception is the registry entry in
+step 3, which genuinely needs an absolute path since it's looked up later from other working
+directories.
+
 ## Step 2 — Ask for a name
 
 This becomes the registry key and, by default, the top-level folder/project name.
