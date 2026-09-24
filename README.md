@@ -66,9 +66,15 @@ Once installed, these are typed directly into a Claude Code chat:
 - Test locally with `claude --plugin-dir ./ops-center` before opening a PR.
 - `claude plugin validate ./ops-center --strict` runs the same structural check CI runs — free,
   no API key needed.
-- `claude plugin eval .` runs the behavioral eval suite under `evals/` — also free (it only uses
-  graders that don't call a judge model), but not run automatically in CI; run it yourself before
-  opening a PR that changes behavior.
+- `claude plugin eval . --trust-plugin --allow-tools Bash Write --scaffold` runs the behavioral
+  eval suite under `evals/` — also free (it only uses graders that don't call a judge model), but
+  not run automatically in CI; run it yourself before opening a PR that changes behavior. All
+  three flags are required: several cases need `Bash`/`Write` to actually perform the write or
+  registry-lookup they're grading (both are gated tools, so the eval runner won't hand them to the
+  plugin under test without an explicit operator grant), and two cases need `--scaffold` to run
+  their `fixture.sh` (plants a pre-existing registry entry / export zip the case's scenario
+  depends on). `--trust-plugin` just skips the interactive first-run trust prompt for this
+  directory, which you've presumably already answered once locally.
 
 ## Known limitations
 

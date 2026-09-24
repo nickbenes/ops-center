@@ -1,7 +1,7 @@
 ---
 description: Once location and name are supplied, /ops-center create must register in the registry before writing any project file.
 max_turns: 20
-allowed_tools: [Read, Glob, Grep]
+allowed_tools: [Read, Glob, Grep, Write, Bash]
 ---
 
 /ops-center create
