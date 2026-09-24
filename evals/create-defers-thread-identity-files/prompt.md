@@ -1,7 +1,7 @@
 ---
 description: /ops-center create must never create memory/threads/** — thread identity files are established later, per actual thread, not during initial mission setup.
 max_turns: 20
-allowed_tools: [Read, Glob, Grep]
+allowed_tools: [Read, Glob, Grep, Write, Bash]
 ---
 
 /ops-center create
