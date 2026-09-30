@@ -1,1 +1,1 @@
-turn_dttm,thread_name,thread_dttm,user_prompt_summary,comm_to,comm_channel,comm_ref
+turn_dttm,thread_name,thread_dttm,thread_id,user_prompt_summary,comm_to,comm_channel,comm_ref,comm_confirmed

@@ -9,15 +9,24 @@ without re-invoking `/ops-center` at all.
 
 ## Where these files live
 
-`memory/threads/<thread-name>/`, where `<thread-name>` is a filesystem-safe form of the thread's
-`thread_dttm` (its stable identity — the ISO timestamp of its first user turn), not its mutable
-display name. Colons in the ISO timestamp become hyphens, e.g. `thread_dttm` of
-`2026-09-15T13:04:00-04:00` becomes folder name `2026-09-15T13-04-00-04-00`.
+`memory/threads/<key>/`, where `<key>` is, **as of v1.1.0**, a filesystem-safe form of the
+thread's `thread_id` (session id/ref or agentId) when one is known; fall back to a filesystem-safe
+form of `thread_dttm` (the ISO timestamp of the thread's first user turn) when `thread_id` isn't
+known yet. Either way it's the thread's stable identity, not its mutable display name. Colons in
+an ISO timestamp become hyphens, e.g. `thread_dttm` of `2026-09-15T13:04:00-04:00` becomes folder
+name `2026-09-15T13-04-00-04-00`.
+
+A thread created under a `thread_dttm`-keyed folder before `thread_id` was available keeps that
+folder name — don't rename an existing thread folder just because `thread_id` becomes known
+later. See `references/logging-protocol.md`'s "`thread_id` vs `thread_dttm`" section for why both
+still exist.
 
 Each thread folder holds three sibling files:
 
-- `identity.md` — see `templates/identity.template.md`, six fields:
-  - **thread_id** — thread_name + thread_dttm.
+- `identity.md` — see `templates/identity.template.md`. Its `## thread_id` section holds three
+  values, not one: `thread_name`, `thread_dttm`, and (optionally) the literal `thread_id` —
+  potentially confusing since the section heading and one of its three fields share a name, but
+  it's the section about the thread's identity, so the overlap is deliberate, not a typo. Plus:
   - **purpose** — one sentence: what this thread exists to do.
   - **reads** — files/folders this thread treats as input.
   - **writes** — files/folders this thread produces.
@@ -37,9 +46,9 @@ Each thread folder holds three sibling files:
 
 ## Renames
 
-If a thread is renamed, keep writing to the same `<thread-name>` folder (it's keyed on the
-stable `thread_dttm`, not the display name). The changing `thread_name` values in the log rows
-create an auditable rename trail.
+If a thread is renamed, keep writing to the same folder (it's keyed on `thread_id` or
+`thread_dttm`, never the display name). The changing `thread_name` values in the log rows create
+an auditable rename trail.
 
 ## Updates
 
