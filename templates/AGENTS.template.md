@@ -39,13 +39,15 @@ Every new thread working in this project should read, in order:
 
 Do not load every historical artifact automatically — retrieve context according to the task.
 
-At the first user turn, determine and retain the thread's stable **Thread DTTM** (the ISO
-timestamp of that first turn) and, when cheaply knowable, its **thread_id** (a session id/ref or
-agentId — see `references/logging-protocol.md`), then make sure the thread's own log files
-(`memory/threads/<key>/`) are correctly identified. See
+At the thread's **very first turn**, right after reading this file, determine its stable
+**thread_id** (an ISO 8601 timestamp — see `references/logging-protocol.md` for why it's
+timestamp-based, not a harness session ref) and write it to that thread's `identity.md`
+immediately, not whenever convenient. Then make sure the thread's own log files
+(`memory/threads/<thread_id>/`) are correctly identified. See
 [`_architecture/BOOTSTRAP_PROMPT.md`](_architecture/BOOTSTRAP_PROMPT.md) §2 and §7.4 for exactly
-how `<key>` is derived and how a thread's `identity.md`/`starter-prompt.md`/`session-log.csv` are
-created the first time that thread does real work.
+how a thread's `identity.md`/`starter-prompt.md`/`session-log.csv` are created the first time
+that thread does real work. On later turns, re-read `thread_id` from `identity.md` rather than
+trusting conversational memory to still hold it accurately — long sessions get compacted.
 
 ## 4. Per-turn logging protocol — mandatory
 
@@ -53,8 +55,8 @@ This is a zero-judgment gate, separate from the context-loading judgment call ab
 before task-type is even evaluated, and a quick, meta, or test-feeling turn is not exempt.
 
 For every user turn: determine the Turn DTTM, the thread's current display name, and its stable
-Thread DTTM (plus `thread_id` if known); write a one-sentence summary of the prompt; append one
-CSV row per communication event this turn (or a single `comm_to=none` row if none) to
+`thread_id` (from `identity.md`, not memory); write a one-sentence summary of the prompt; append
+one CSV row per communication event this turn (or a single `comm_to=none` row if none) to
 `memory/project-logs.csv` AND to this thread's own `session-log.csv`; then do the work; then
 update status/turnover/lessons if the work materially changed project state. Full field
 definitions and CSV escaping rules are in

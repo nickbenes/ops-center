@@ -3,7 +3,7 @@ stand on its own — restate the identity fields in second person rather than li
 identity.md, so the new session becomes this thread's role with zero ambiguity. Replace every
 <placeholder> below, then delete this instruction line.>
 
-You are picking up the thread named `<thread_name>` (created <thread_dttm>) in the
+You are picking up the thread named `<thread_name>` (created <thread_id>) in the
 `<project-name>` project, working from `<absolute project path>`.
 
 Your purpose here is: <purpose, restated as an instruction — "Your job is to...">
