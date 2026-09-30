@@ -1,6 +1,7 @@
 ## thread_id
-- thread_name: <stable name — a filesystem-safe form of thread_dttm, e.g. 2026-09-15T13-04-00-04-00>
+- thread_name: <stable name — a filesystem-safe form of thread_id if known, else thread_dttm, e.g. 2026-09-15T13-04-00-04-00>
 - thread_dttm: <the ISO 8601 timestamp of this thread's first user turn — never changes>
+- thread_id: <session id/ref or agentId, if known — optional for now, see references/logging-protocol.md>
 
 ## purpose
 <One sentence: what this thread exists to do.>
@@ -12,7 +13,7 @@
 - <file or folder this thread produces>
 
 ## typical_recipients
-- <thread_name> via <direct_message | shared_file | broadcast>
+- <thread_name> via <send_message | agent_spawn | shared_file | broadcast>
 
 ## trigger
 - human | cron: <expression, if automated>

@@ -48,8 +48,15 @@ Use these terms consistently:
     change over time.
 -   **Turn** --- one user message and the work initiated by it.
 -   **Thread DTTM** --- ISO timestamp of the first user turn in a
-    thread. Treat this as the stable identifier for that thread's log
-    filenames.
+    thread. The original stable identifier for that thread's log
+    filenames; kept for compatibility (see Thread ID).
+-   **Thread ID** --- (as of v1.1.0) a harness-assigned session id/ref
+    or agentId, when knowable. Intended to eventually supersede Thread
+    DTTM as the stable identifier, since it doesn't depend on
+    reconstructing a precise first-turn timestamp after the fact ---
+    but optional and additive for now, not a replacement, until a
+    session id's stability across resumption/compaction/renaming is
+    confirmed in practice. See §7.1 and §7.4.
 -   **Session** --- an informal period of activity inside a thread. A
     thread may be resumed after a wrap-up.
 
@@ -129,7 +136,7 @@ memory/
   PROJECT-STATUS.md
   project-logs.csv
   threads/
-    <thread-name>/
+    <key>/
       identity.md
       starter-prompt.md
       session-log.csv
@@ -153,12 +160,13 @@ Do not create empty complexity merely for symmetry. Omit or add
 directories when the real project warrants it, and document meaningful
 deviations in `AGENTS.md`.
 
-`memory/threads/<thread-name>/` replaces the older flat
-`memory/session-log/` layout. Each thread gets its own folder holding
-its identity, its starter prompt, and its own turn log side by side ---
-see 7.4 for the identity/starter-prompt templates. `<thread-name>`
-should be a filesystem-safe form of the thread's stable identifier
-(Thread DTTM), not its mutable display name.
+`memory/threads/<key>/` replaces the older flat `memory/session-log/`
+layout. Each thread gets its own folder holding its identity, its
+starter prompt, and its own turn log side by side --- see 7.4 for the
+identity/starter-prompt templates. `<key>` should be a filesystem-safe
+form of the thread's stable identifier: its Thread ID when known (as of
+v1.1.0), otherwise its Thread DTTM --- never its mutable display name.
+See §2 and §7.1 for why both identifiers currently coexist.
 
 `_architecture/` is deliberately separate from `memory/`: bootstrap
 instructions describe the architecture itself, while `memory/` contains
@@ -239,21 +247,31 @@ Do not load every historical artifact automatically. Retrieve context
 according to the task.
 
 At the first user turn, determine and retain the thread's stable
-**Thread DTTM**, then ensure the thread's log files are correctly
-identified.
+**Thread DTTM** (and its **Thread ID**, if cheaply knowable --- see
+§2), then ensure the thread's log files are correctly identified.
 
 ## 6.4 Per-turn logging protocol --- mandatory
+
+This is a **zero-judgment gate**, separate from the context-loading
+judgment call in §6.3. It fires before task-type is even evaluated ---
+a quick, meta, or test-feeling turn is not exempt. Do not let logging
+get bundled in your head with the heavier "which files does this task
+need" judgment; that judgment stays proportional to the task, logging
+does not.
 
 For **every user turn**, as part of handling the request:
 
 1.  Determine the current Turn DTTM.
 2.  Determine the current thread display name.
-3.  Retain the stable Thread DTTM from the thread's first user turn.
+3.  Retain the stable Thread DTTM (and Thread ID, if known) from the
+    thread's first user turn.
 4.  Summarize the user's prompt in one concise, useful sentence.
-5.  Append one CSV row to:
+5.  Append one CSV row per communication event this turn (or a single
+    `comm_to=none` row if there was none --- see §7.1) to:
     -   `memory/project-logs.csv`; and
-    -   the current thread's
-        `memory/session-log/session-log-<THREAD-DTTM>.csv`.
+    -   the current thread's own
+        `memory/threads/<thread-id-or-dttm>/session-log.csv` (§7.2,
+        §7.4).
 6.  Perform the user's requested work.
 7.  If the work materially changes project state, durable knowledge,
     process, or cross-thread dependencies, update the appropriate
@@ -269,6 +287,14 @@ instructions explicitly add that requirement.
 If the filesystem is temporarily unwritable, do not falsely claim the
 turn was logged. Continue the user's work if possible and report the
 logging failure succinctly.
+
+If a thread discovers mid-stream that it never started logging, or
+stopped for a while, backfill from the point of discovery forward with
+an explicit gap note (e.g. in the next row's `user_prompt_summary`, or
+in `PROJECT-STATUS.md`). Never fabricate a precise historical
+`turn_dttm` or `thread_dttm` for turns that were not actually logged at
+the time --- an invented reconstruction is worse than an honest gap,
+because it looks authoritative when it is not.
 
 ## 6.5 Cross-thread information flow
 
@@ -291,14 +317,20 @@ project?
 
 Persist it in the appropriate status, turnover, lesson, authoritative
 output, mission/process artifact, or other durable file. When the
-project's log includes `comm_to`/`comm_channel` (see 7.1), these two
-questions map directly onto those fields: *who* is `comm_to`, *how* is
-`comm_channel`.
+project's log includes `comm_to`/`comm_channel`/`comm_ref` (see 7.1),
+these questions map directly onto those fields: *who* is `comm_to`,
+*how* is `comm_channel`, and the specifics of how (a message id, an
+agent id, a file path) are `comm_ref`.
 
 ### Have I told them?
 
 Verify that the durable artifact was updated and that a future relevant
-thread can discover it.
+thread can discover it. When the channel was a live message to a peer
+session, this is `comm_confirmed` (see 7.1): a same-machine peer reports
+back if it held or refused your message, so silence there means it went
+through; a Remote Control or cloud peer never reports back at all, so
+silence there is genuinely unknown, not success. Do not record a
+message as confirmed just because sending it did not error.
 
 Do not assume another thread can see this thread's conversational
 context.
@@ -397,8 +429,13 @@ in chronological write order.
 Required columns:
 
 ``` csv
-turn_dttm,thread_name,thread_dttm,user_prompt_summary,comm_to,comm_channel,comm_ref
+turn_dttm,thread_name,thread_dttm,thread_id,user_prompt_summary,comm_to,comm_channel,comm_ref,comm_confirmed
 ```
+
+**As of v1.1.0**: added `thread_id` and `comm_confirmed`; redefined
+`comm_channel`'s values; moved from a pipe-delimited-list encoding of
+multiple communications in one row to one row per communication event.
+`thread_dttm` is kept, not removed --- see the Thread ID note in §2.
 
 Project-specific instructions may add columns, but should not remove or
 redefine the required fields.
@@ -410,23 +447,54 @@ redefine the required fields.
     time of this turn. Because names may change, do not use this as
     stable identity.
 -   `thread_dttm` --- ISO 8601 timestamp of the first user turn in this
-    thread; stable thread identity.
+    thread. The original stable thread identity; kept for
+    compatibility while `thread_id` (below) is unproven.
+-   `thread_id` --- (optional, for now) the thread's stable identity
+    going forward: a session id/ref or agentId, the same kind of
+    identifier a peer-discovery call like `ListAgents` shows (e.g. the
+    bracketed ref in `"this session is <name> [6dd6a6]"`), or an
+    `agentId` for a subagent. Populate it when cheaply known (a thread
+    generally has to call something like `ListAgents` once to learn its
+    own ref --- do that once per thread and cache it, not every turn);
+    leave blank otherwise. See §7.4 for how this interacts with thread
+    folder naming, and §2 for why it is not a hard replacement for
+    `thread_dttm` yet.
 -   `user_prompt_summary` --- concise semantic summary,
     e.g. `User asked for help fixing FOO_BAR error.`
--   `comm_to` --- pipe-delimited list of destination thread identifiers
-    this turn's work is relevant to (prefer a stable identifier such as
-    `thread_dttm` over a mutable display name), or `none`.
--   `comm_channel` --- pipe-delimited, positionally matched to
-    `comm_to`. One of: `direct_message` (addressed to one specific
-    thread), `shared_file` (written to a shared artifact, e.g.
-    turnover), `broadcast` (written to a project-wide artifact for all
-    threads), or `none` (paired only with `comm_to=none`).
--   `comm_ref` --- optional, pipe-delimited, positionally matched. File
-    path/id of the artifact when the channel is `shared_file` or
-    `broadcast`; blank or `-` otherwise.
+-   `comm_to` --- the actual identifier used in the real communication:
+    the session name/ref or agentId messaged, the specific thread a
+    `shared_file` was written for, or `none`. Record whatever the real
+    call (e.g. a peer-messaging tool, a peer-discovery call, an
+    agent-spawning tool) actually returned --- you generally cannot know
+    a peer's stable identity in advance, so do not guess one.
+-   `comm_channel` --- one of:
+    -   `send_message` --- a live message to an addressable peer
+        session (same-machine or via a remote relay).
+    -   `agent_spawn` --- dispatched a subagent and got a hand-back
+        report.
+    -   `shared_file` --- wrote to an artifact meant for a specific
+        other thread to read later (e.g. a turnover file).
+    -   `broadcast` --- wrote to a project-wide artifact with no
+        specific addressee (e.g. `PROJECT-STATUS.md`).
+    -   `none` --- no communication this turn (paired only with
+        `comm_to=none`).
+-   `comm_ref` --- optional. The message id a `send_message` call
+    returned, the agent id from an `agent_spawn`, or the file path for
+    `shared_file`/`broadcast`; blank or `-` otherwise.
+-   `comm_confirmed` --- `yes` / `no` / `unknown`. Only meaningful on
+    `send_message` rows; blank or `-` otherwise. A same-machine peer
+    session reports back if your message was held or refused ---
+    silence there means it went through (`yes`). A remote/cloud peer
+    never reports back at all --- silence there is genuinely `unknown`,
+    not success. Do not record `yes` just because the send call itself
+    did not error.
 
-Most turns are pure single-thread work: `comm_to=none,comm_channel=none`
-is the common case. Do not fabricate cross-thread relevance.
+A turn with zero communications is one row. A turn with *N*
+communications is *N* rows, all sharing the same
+`turn_dttm`/`thread_name`/`thread_dttm`/`thread_id`/`user_prompt_summary`
+--- no positional alignment between columns needed. Most turns are pure
+single-thread work: one row, `comm_to=none,comm_channel=none`. Do not
+fabricate cross-thread relevance.
 
 Follow normal CSV escaping rules. Quote fields containing commas,
 quotes, or line breaks; escape embedded quotes by doubling them.
@@ -438,12 +506,17 @@ instructions explicitly require it.
 
 For each thread maintain:
 
-`memory/threads/<thread-name>/session-log.csv`
+`memory/threads/<key>/session-log.csv`
 
-where `<thread-name>` is a filesystem-safe form of the Thread DTTM. For
-example:
+where, **as of v1.1.0**, `<key>` is a filesystem-safe form of the
+Thread ID when one is known, or a filesystem-safe form of the Thread
+DTTM otherwise. For example, keyed on Thread DTTM:
 
 `memory/threads/2026-09-15T13-04-00-04-00/session-log.csv`
+
+A thread folder created before Thread ID was known keeps its existing
+`<key>` --- do not rename an established folder just because Thread ID
+becomes known later.
 
 The file uses the same required columns as `project-logs.csv` and
 contains only turns from that thread.
@@ -469,15 +542,20 @@ summary should be short enough that mandatory logging remains cheap.
 
 Alongside its log, each thread folder holds two more files:
 
-`memory/threads/<thread-name>/identity.md`
+`memory/threads/<key>/identity.md`
 
-A short, six-field declaration of that thread's role, used to build a
-cross-thread network diagram without re-deriving it from log history:
+A short declaration of that thread's role, used to build a cross-thread
+network diagram without re-deriving it from log history. Its `##
+thread_id` section holds three values as of v1.1.0, not two --- the
+overlap between the section name and one of its own fields is
+deliberate, not a typo, since the section is about the thread's
+identity as a whole:
 
 ``` text
 ## thread_id
 - thread_name: <stable name>
 - thread_dttm: <creation timestamp, matches project-logs.csv>
+- thread_id: <session id/ref or agentId, if known --- optional for now, see §7.1>
 
 ## purpose
 <one sentence: what this thread exists to do>
@@ -489,7 +567,7 @@ cross-thread network diagram without re-deriving it from log history:
 - <file or folder this thread produces>
 
 ## typical_recipients
-- <thread_name> via <direct_message | shared_file | broadcast>
+- <thread_name> via <send_message | agent_spawn | shared_file | broadcast>
 
 ## trigger
 - human | cron: <expression, if automated>
@@ -499,7 +577,7 @@ cross-thread network diagram without re-deriving it from log history:
 `comm_to`/`comm_channel` columns in the log record what actually
 happened on a given turn.
 
-`memory/threads/<thread-name>/starter-prompt.md`
+`memory/threads/<key>/starter-prompt.md`
 
 The literal copy-paste text a human pastes into a fresh session to
 bootstrap it as this thread: who it is, its purpose, what to read
@@ -517,9 +595,12 @@ the thread's role changes materially.
 
 A thread may optionally maintain:
 
-`memory/session-log/session-narrative-<THREAD-DTTM>.md`
+`memory/threads/<key>/session-narrative.md`
 
-Use the same Thread DTTM as its CSV log.
+using the same `<key>` (Thread ID or Thread DTTM) as its CSV log
+(§7.2). This corrects an earlier version of this document, which
+pointed at the flat `memory/session-log/` layout that §4 already
+superseded.
 
 Create or append to this file when:
 
@@ -846,7 +927,7 @@ across multiple threads using `project-logs.csv`.
 ### Renamed thread
 
 A thread can be renamed without breaking its stable log identity because
-`thread_dttm` remains constant.
+`thread_dttm` (and, when populated, `thread_id`) remains constant.
 
 ### Cross-thread handoff
 

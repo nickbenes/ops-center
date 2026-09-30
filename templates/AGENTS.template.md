@@ -40,22 +40,29 @@ Every new thread working in this project should read, in order:
 Do not load every historical artifact automatically — retrieve context according to the task.
 
 At the first user turn, determine and retain the thread's stable **Thread DTTM** (the ISO
-timestamp of that first turn), then make sure the thread's own log files
-(`memory/threads/<thread-name>/`) are correctly identified. See
+timestamp of that first turn) and, when cheaply knowable, its **thread_id** (a session id/ref or
+agentId — see `references/logging-protocol.md`), then make sure the thread's own log files
+(`memory/threads/<key>/`) are correctly identified. See
 [`_architecture/BOOTSTRAP_PROMPT.md`](_architecture/BOOTSTRAP_PROMPT.md) §2 and §7.4 for exactly
-how `<thread-name>` is derived and how a thread's `identity.md`/`starter-prompt.md`/
-`session-log.csv` are created the first time that thread does real work.
+how `<key>` is derived and how a thread's `identity.md`/`starter-prompt.md`/`session-log.csv` are
+created the first time that thread does real work.
 
 ## 4. Per-turn logging protocol — mandatory
 
+This is a zero-judgment gate, separate from the context-loading judgment call above — it fires
+before task-type is even evaluated, and a quick, meta, or test-feeling turn is not exempt.
+
 For every user turn: determine the Turn DTTM, the thread's current display name, and its stable
-Thread DTTM; write a one-sentence summary of the prompt; append one CSV row to
-`memory/project-logs.csv` AND to this thread's own `memory/threads/<thread-name>/session-log.csv`;
-then do the work; then update status/turnover/lessons if the work materially changed project
-state. Full field definitions and CSV escaping rules are in
+Thread DTTM (plus `thread_id` if known); write a one-sentence summary of the prompt; append one
+CSV row per communication event this turn (or a single `comm_to=none` row if none) to
+`memory/project-logs.csv` AND to this thread's own `session-log.csv`; then do the work; then
+update status/turnover/lessons if the work materially changed project state. Full field
+definitions and CSV escaping rules are in
 [`_architecture/BOOTSTRAP_PROMPT.md`](_architecture/BOOTSTRAP_PROMPT.md) §6.4 and §7 — don't
 re-derive them, just follow them. If the filesystem is temporarily unwritable, say so rather than
-claiming the turn was logged.
+claiming the turn was logged. If you discover mid-stream that logging was missed for a while,
+backfill from the discovery point with an explicit gap note — never fabricate a precise
+historical timestamp for turns that weren't actually logged at the time.
 
 ## 5. Cross-thread information flow
 

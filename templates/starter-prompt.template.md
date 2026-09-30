@@ -25,5 +25,6 @@ scheduled job with expression "<cron expression>" — if scheduled, note that th
 lives outside this project; this prompt is just what runs once triggered>.
 
 On every turn, before doing anything else, log it: append one row to
-`memory/project-logs.csv` and to `memory/threads/<thread-name>/session-log.csv`, following the
-per-turn logging protocol in `AGENTS.md` §4.
+`memory/project-logs.csv` and to this thread's own `session-log.csv`, following the per-turn
+logging protocol in `AGENTS.md` §4. This is a zero-judgment gate — it applies even to quick or
+test-feeling turns, not just substantial ones.
