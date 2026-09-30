@@ -39,7 +39,7 @@ before calling something done.>
 ## Project-specific logging fields (if any)
 
 <Leave as "none" unless this project needs to track something beyond the standard
-turn_dttm/thread_name/thread_dttm/thread_id/user_prompt_summary/comm_to/comm_channel/comm_ref/
+turn_dttm/thread_name/thread_id/user_prompt_summary/comm_to/comm_channel/comm_ref/
 comm_confirmed columns.>
 
 ## Additional AAR / narrative requirements (if any)
